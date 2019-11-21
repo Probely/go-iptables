@@ -27,6 +27,7 @@ const (
 	// Note the LSB-conforming "/run" directory does not exist on old
 	// distributions, so assume "/var" is symlinked
 	xtablesLockFilePath = "/var/run/xtables.lock"
+	lockPathEnvVariable = "XTABLES_LOCK_PATH"
 
 	defaultFilePerm = 0600
 )
@@ -73,10 +74,21 @@ func (l *fileLock) Unlock() error {
 	return syscall.Close(l.fd)
 }
 
+// getLockFile allows the user to override the default xtablesLockFilePath
+// location
+func getLockFilePath() string {
+	path := os.Getenv(lockPathEnvVariable)
+	if path == "" {
+		path = xtablesLockFilePath
+	}
+	return path
+}
+
 // newXtablesFileLock opens a new lock on the xtables lockfile without
 // acquiring the lock
 func newXtablesFileLock() (*fileLock, error) {
-	fd, err := syscall.Open(xtablesLockFilePath, os.O_CREATE, defaultFilePerm)
+	lockFilePath := getLockFilePath()
+	fd, err := syscall.Open(lockFilePath, os.O_CREATE, defaultFilePerm)
 	if err != nil {
 		return nil, err
 	}
